@@ -1,10 +1,15 @@
 # Not needed by the deployed function, and keeps the upload small.
-test/
-tools/
-demo_site/
-output/
+#
+# Every directory rule is anchored with a leading slash. An unanchored
+# `output/` previously matched `src/output/` as well and stripped the result
+# assembler out of the function bundle.
+
+/test/
+/tools/
+/demo_site/
+/output/
+/fetcher.py
+/requirements.txt
+/urls.txt
+/ARCHITECTURE.md
 __pycache__/
-fetcher.py
-requirements.txt
-urls.txt
-ARCHITECTURE.md

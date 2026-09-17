@@ -1,11 +1,16 @@
-# Dependencies
-node_modules/
+# NOTE ON ANCHORING: a pattern without a leading slash matches at every depth.
+# An unanchored `output/` here silently excluded `src/output/` — the module that
+# assembles results — so the pushed repo could not run and the deployed
+# function died with ERR_MODULE_NOT_FOUND. Directory rules that mean "the one
+# at the repo root" must start with `/`.
 
-# Scrape output — generated artifacts, not source
-output/
-*.csv
-*.log
-!test/fixtures/**/*.csv
+# Dependencies
+/node_modules/
+
+# Scrape output at the repo root — generated artifacts, not source
+/output/
+/*.csv
+/*.log
 
 # Local env / credentials. ANTHROPIC_API_KEY is read from the environment and
 # must never be committed.
@@ -21,7 +26,7 @@ __pycache__/
 /playwright-report/
 /test-results/
 /blob-report/
-playwright/.cache/
+/playwright/.cache/
 
 # Editors / OS
 .vscode/
