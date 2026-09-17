@@ -11,12 +11,18 @@
  * detail, and there is nothing to debug from outside. Catching it here turns a
  * cold-start crash into a readable response.
  *
- * No `Renderer` is passed: a serverless function has no Chromium and a hard
- * time limit, so `src/server.js` forces `render: 'never'` when it detects a
+ * Only /api/* reaches this function. The UI in public/ is served directly by
+ * the platform's static hosting (see vercel.json: outputDirectory plus an
+ * /api-only rewrite). Routing the static files *through* the function crashed
+ * it outright — and a static asset has no business costing a function
+ * invocation anyway. createApp() still mounts express.static, so `npm start`
+ * serves the UI locally from the same code.
+ *
+ * No Renderer is passed: a serverless function has no Chromium and a hard time
+ * limit, so src/server.js forces `render: 'never'` when it detects a
  * serverless environment. Static extraction — JSON-LD, Open Graph, semantic
  * HTML, label proximity, list records, numbered pagination — all work here.
- * JavaScript-rendered pages and infinite scroll need `npm start` on a normal
- * server.
+ * JavaScript-rendered pages and infinite scroll need a normal Node process.
  */
 
 /** @type {import('express').Express | null} */
