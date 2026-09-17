@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Infinite scroll directory | Example Pages</title>
+  <meta property="og:image" content="/images/ypg-logo.png" />
+</head>
+<body>
+  <header class="site-header"><nav class="navbar"><a href="/">Home</a></nav></header>
+
+  <main class="results" id="results">
+    <!-- The first batch is server-rendered; everything after it arrives only
+         when the page is scrolled, and the last batch needs a button click.
+         There are no pagination links anywhere. -->
+    <div class="listing-card">
+      <h4 class="company-name">Studio 01</h4>
+      <p class="cat">Category: <span>Beauty Salons and Spa</span></p>
+      <div class="logo-box"><img src="/images/company/studio-1.jpg" alt="Studio 01" /></div>
+      <p class="addr">No.10, First Road, Township 1, Yangon</p>
+      <p class="tel"><a href="tel:0942200001">09-42200001</a></p>
+    </div>
+    <div class="listing-card">
+      <h4 class="company-name">Studio 02</h4>
+      <p class="cat">Category: <span>Beauty Salons and Spa</span></p>
+      <div class="logo-box"><img src="/images/company/studio-2.jpg" alt="Studio 02" /></div>
+      <p class="addr">No.20, First Road, Township 2, Yangon</p>
+      <p class="tel"><a href="tel:0942200002">09-42200002</a></p>
+    </div>
+    <div class="listing-card">
+      <h4 class="company-name">Studio 03</h4>
+      <p class="cat">Category: <span>Beauty Salons and Spa</span></p>
+      <div class="logo-box"><img src="/images/company/studio-3.jpg" alt="Studio 03" /></div>
+      <p class="addr">No.30, First Road, Township 3, Yangon</p>
+      <p class="tel"><a href="tel:0942200003">09-42200003</a></p>
+    </div>
+  </main>
+
+  <div id="more-wrap"></div>
+  <div id="spacer" style="height: 1200px"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    let loaded = 3;
+    const TOTAL = 12;
+    const BATCH = 3;
+
+    function card(n) {
+      const div = document.createElement('div');
+      div.className = 'listing-card';
+      div.innerHTML = `
+        <h4 class="company-name">Studio ${String(n).padStart(2, '0')}</h4>
+        <p class="cat">Category: <span>Beauty Salons and Spa</span></p>
+        <div class="logo-box"><img src="/images/company/studio-${n}.jpg" alt="Studio ${n}"></div>
+        <p class="addr">No.${n}0, First Road, Township ${n}, Yangon</p>
+        <p class="tel"><a href="tel:09422000${String(n).padStart(2, '0')}">09-422000${String(n).padStart(2, '0')}</a></p>`;
+      return div;
+    }
+
+    function appendBatch() {
+      const upTo = Math.min(loaded + BATCH, TOTAL);
+      for (let n = loaded + 1; n <= upTo; n += 1) results.append(card(n));
+      loaded = upTo;
+      // Keep the page scrollable so the next scroll event can fire.
+      document.getElementById('spacer').style.height = '1200px';
+      if (loaded >= 9 && loaded < TOTAL) showButton();
+      if (loaded >= TOTAL) {
+        document.getElementById('more-wrap').innerHTML = '';
+        document.getElementById('spacer').style.height = '200px';
+      }
+    }
+
+    function showButton() {
+      // The final batch is behind a button, not behind scrolling.
+      document.getElementById('more-wrap').innerHTML =
+        '<button type="button" id="load-more" class="load-more">Load more results</button>';
+      document.getElementById('load-more').addEventListener('click', appendBatch);
+    }
+
+    // Infinite scroll: append when the viewport nears the bottom.
+    let busy = false;
+    window.addEventListener('scroll', () => {
+      if (busy || loaded >= 9) return;
+      const nearBottom = window.scrollY + window.innerHeight >= document.body.scrollHeight - 400;
+      if (!nearBottom) return;
+      busy = true;
+      setTimeout(() => { appendBatch(); busy = false; }, 150);
+    });
+  </script>
+</body>
+</html>

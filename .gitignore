@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Scrape output — generated artifacts, not source
+output/
+*.csv
+*.log
+!test/fixtures/**/*.csv
+
+# Local env / credentials. ANTHROPIC_API_KEY is read from the environment and
+# must never be committed.
+.env
+.env.*
+!.env.example
+
+# Python bytecode from the earlier prototype in this directory
+__pycache__/
+*.py[cod]
+
+# Playwright
+/playwright-report/
+/test-results/
+/blob-report/
+playwright/.cache/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

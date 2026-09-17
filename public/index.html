@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Label Scraper</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Label Scraper</h1>
+    <p class="tagline">Give it a URL and the fields you want. It looks for them, and returns <code>null</code> rather than guessing.</p>
+  </header>
+
+  <main>
+    <form id="scrape-form" class="card">
+      <div class="field">
+        <label for="url">Website URL</label>
+        <input
+          id="url"
+          name="url"
+          type="text"
+          inputmode="url"
+          placeholder="Enter website URL, e.g. example-hotel.com"
+          autocomplete="off"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <div class="labels-head">
+          <label for="label-input">Labels to extract</label>
+          <div class="presets">
+            <span>Presets:</span>
+            <button type="button" class="link" data-preset="hotel">Hotel</button>
+            <button type="button" class="link" data-preset="business">Local business</button>
+            <button type="button" class="link" data-preset="product">Product</button>
+            <button type="button" class="link" data-preset="clear">Clear</button>
+          </div>
+        </div>
+
+        <div class="label-entry">
+          <input
+            id="label-input"
+            type="text"
+            placeholder="Type a label and press Enter (e.g. Phone Number)"
+            autocomplete="off"
+            aria-describedby="label-help"
+          />
+          <button type="button" id="add-label">+ Add Label</button>
+        </div>
+        <p id="label-help" class="help">
+          Any label works — <em>Opening Hours</em>, <em>CEO Name</em>, <em>Latitude</em>, <em>Menu Image</em>.
+          Plural labels (<em>Gallery Images</em>, <em>Amenities</em>) return a list.
+        </p>
+
+        <ul id="label-list" class="label-list" aria-live="polite"></ul>
+      </div>
+
+      <details class="advanced">
+        <summary>Advanced options</summary>
+        <div class="options-grid">
+          <label>
+            What is on this page?
+            <select id="mode">
+              <option value="auto" selected>Auto — detect</option>
+              <option value="list">A list of many items</option>
+              <option value="single">One single subject</option>
+            </select>
+            <span class="hint">A directory or results page gives one row per item.</span>
+          </label>
+          <label>
+            Page budget
+            <input id="maxPages" type="number" min="1" max="15" value="5" />
+            <span class="hint">Total pages fetched, including the first.</span>
+          </label>
+          <label>
+            Browser rendering
+            <select id="render">
+              <option value="auto" selected>Auto — only when needed</option>
+              <option value="always">Always render</option>
+              <option value="never">Never (static HTML only)</option>
+            </select>
+            <span class="hint">Needed for JavaScript-built pages.</span>
+          </label>
+          <label>
+            Confidence floor
+            <input id="minConfidence" type="number" min="0" max="0.95" step="0.05" value="0.4" />
+            <span class="hint">Below this, a field is reported as null.</span>
+          </label>
+        </div>
+
+        <div class="checks">
+          <label>
+            <input id="followInternalLinks" type="checkbox" checked />
+            <span>Follow relevant internal pages (/contact, /gallery…)</span>
+          </label>
+          <label>
+            <input id="allowPagination" type="checkbox" />
+            <span>
+              Follow pagination — <em>?page=2</em>, <em>/page/3/</em>, "Next ›"
+              <span class="hint">
+                Walks up to
+                <input id="maxPaginationPages" type="number" min="1" max="500" value="2" class="inline-num" />
+                more pages, or
+                <label class="inline-check"><input id="allPages" type="checkbox" /> every page</label>
+              </span>
+            </span>
+          </label>
+          <label>
+            <input id="exhaustScroll" type="checkbox" />
+            <span>
+              Infinite scroll — scroll until the list stops growing
+              <span class="hint">Needs browser rendering. Also clicks "load more" as it appears.</span>
+            </span>
+          </label>
+          <label>
+            <input id="clickLoadMore" type="checkbox" />
+            <span>Click "load more" buttons while rendering (without full scrolling)</span>
+          </label>
+          <label>
+            <input id="useLlm" type="checkbox" />
+            <span>
+              Use the AI fallback for labels the parsers miss
+              <span class="hint" id="llm-hint"></span>
+            </span>
+          </label>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button type="submit" id="submit" class="primary">Start Scraping</button>
+        <span id="status-line" class="status" role="status"></span>
+      </div>
+    </form>
+
+    <section id="results" class="card results" hidden>
+      <div class="results-head">
+        <div>
+          <h2>Results</h2>
+          <p id="results-summary" class="summary"></p>
+        </div>
+        <div class="exports">
+          <button type="button" id="export-json">Export JSON</button>
+          <button type="button" id="export-csv">Export CSV</button>
+          <button type="button" id="toggle-raw" class="link">Show raw JSON</button>
+        </div>
+      </div>
+
+      <div id="notices"></div>
+
+      <div class="table-scroll">
+        <table id="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Extracted Value</th>
+              <th scope="col">Source</th>
+              <th scope="col">How</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <details id="pages-detail">
+        <summary>Pages visited</summary>
+        <ul id="pages-list" class="pages-list"></ul>
+      </details>
+
+      <pre id="raw-json" hidden></pre>
+    </section>
+  </main>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

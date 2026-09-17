@@ -1,0 +1,14 @@
+# Normalise line endings in the repo to LF, and let Git check out whatever the
+# platform prefers. Without this, cloning on Windows vs Linux produces diffs
+# on every line of every file.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

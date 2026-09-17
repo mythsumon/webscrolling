@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Harbour Apartments</title>
+  <noscript>Please enable JavaScript to view this site.</noscript>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // Everything below is invisible to a static fetch — this fixture exists to
+    // prove the renderer path, including lazy images that only load on scroll.
+    const data = {
+      name: 'Harbour Apartments',
+      phone: '+64 9 555 0199',
+      email: 'stay@harbourapartments.example',
+      address: '5 Marine Parade, Devonport, Auckland 0624',
+      price: 'NZD 240 per night',
+      amenities: ['Sea view', 'Secure parking', 'Laundry', 'Air conditioning'],
+    };
+
+    document.getElementById('root').innerHTML = `
+      <h1>${data.name}</h1>
+      <p class="description">Four self-contained apartments on the Devonport waterfront, a short
+         walk from the ferry terminal, each with a sea-facing balcony and a full kitchen.</p>
+      <dl class="details">
+        <dt>Telephone</dt><dd>${data.phone}</dd>
+        <dt>Email</dt><dd>${data.email}</dd>
+        <dt>Address</dt><dd>${data.address}</dd>
+        <dt>Price</dt><dd>${data.price}</dd>
+      </dl>
+      <h2>Amenities</h2>
+      <ul class="amenities">${data.amenities.map((a) => `<li>${a}</li>`).join('')}</ul>
+      <div class="gallery" id="gallery"></div>
+      <div style="height: 1800px"></div>
+    `;
+
+    // Gallery images appear only once the gallery scrolls into view.
+    const gallery = document.getElementById('gallery');
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        gallery.innerHTML = [1, 2, 3]
+          .map((n) => `<img src="/img/apartment-${n}-1200.jpg" alt="Apartment ${n}" width="1200" height="800">`)
+          .join('');
+        observer.disconnect();
+      }
+    });
+    observer.observe(gallery);
+  </script>
+</body>
+</html>
