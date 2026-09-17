@@ -1,0 +1,10 @@
+# Not needed by the deployed function, and keeps the upload small.
+test/
+tools/
+demo_site/
+output/
+__pycache__/
+fetcher.py
+requirements.txt
+urls.txt
+ARCHITECTURE.md

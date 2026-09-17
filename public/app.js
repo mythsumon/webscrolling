@@ -501,21 +501,48 @@ toggleRaw.addEventListener('click', () => {
 document.getElementById('export-json').addEventListener('click', () => download('json'));
 document.getElementById('export-csv').addEventListener('click', () => download('csv'));
 
-function download(format) {
+async function download(format) {
   if (!lastResult) return;
-  // Prefer the server route (proper filename + Content-Disposition); fall back
-  // to a client-side blob if the result has aged out of the server's cache.
+
+  // Prefer the server route: it sets a real filename via Content-Disposition.
+  // But on serverless hosting each request can hit a different instance, so
+  // the result may not be in *this* instance's memory — hence probe with fetch
+  // rather than navigating, and build the file locally when it is not there.
   if (lastResult.id) {
-    window.location.href = `/api/export/${lastResult.id}.${format}`;
-    return;
+    try {
+      const res = await fetch(`/api/export/${lastResult.id}.${format}`);
+      if (res.ok) {
+        saveBlob(await res.blob(), `${hostOf(lastResult.url)}.${format}`);
+        return;
+      }
+    } catch {
+      /* fall through to the local path */
+    }
   }
+
   const text = format === 'json' ? JSON.stringify(lastResult, null, 2) : toCsvClient(lastResult);
-  const blob = new Blob([text], { type: format === 'json' ? 'application/json' : 'text/csv' });
+  saveBlob(
+    new Blob([text], { type: format === 'json' ? 'application/json' : 'text/csv;charset=utf-8' }),
+    `${hostOf(lastResult.url)}.${format}`,
+  );
+}
+
+function saveBlob(blob, filename) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `scrape.${format}`;
+  a.download = filename;
+  document.body.append(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(a.href);
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/[^a-z0-9.-]/gi, '_');
+  } catch {
+    return 'scrape';
+  }
 }
 
 function toCsvClient(result) {
@@ -550,14 +577,31 @@ function csvCell(value) {
   renderLabels();
   try {
     const health = await (await fetch('/api/health')).json();
-    const bits = [];
-    if (!health.llm) bits.push('Needs ANTHROPIC_API_KEY on the server.');
-    if (health.renderer === 'unavailable') {
-      notices.append(notice(`Browser rendering unavailable: ${health.rendererNote}`, 'warn'));
-      results.hidden = false;
-    }
-    llmHint.textContent = bits.join(' ');
+
+    llmHint.textContent = health.llm ? '' : 'Needs ANTHROPIC_API_KEY on the server.';
     document.getElementById('useLlm').disabled = !health.llm;
+
+    // Say what this deployment cannot do *before* someone ticks a box that
+    // will be silently ignored.
+    if (health.renderer === 'unavailable') {
+      const renderSelect = document.getElementById('render');
+      const scroll = document.getElementById('exhaustScroll');
+      const loadMore = document.getElementById('clickLoadMore');
+
+      renderSelect.value = 'never';
+      renderSelect.disabled = true;
+      scroll.checked = false;
+      scroll.disabled = true;
+      loadMore.checked = false;
+      loadMore.disabled = true;
+
+      const banner = document.createElement('div');
+      banner.className = 'notice warn';
+      banner.textContent = health.serverless
+        ? 'Static-only on this deployment: no browser is available, so JavaScript-built pages and infinite scroll will not work here. Everything else does. Run it locally with `npm start` for full rendering.'
+        : `Browser rendering unavailable: ${health.rendererNote}`;
+      document.querySelector('.advanced').prepend(banner);
+    }
   } catch {
     /* server health is informational */
   }

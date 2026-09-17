@@ -11,7 +11,8 @@
     "start": "node src/server.js",
     "scrape": "node src/cli.js",
     "test": "node --test test/",
-    "postinstall-browsers": "playwright install chromium"
+    "postinstall-browsers": "playwright install chromium",
+    "vercel-build": "echo \"no build step\""
   },
   "engines": {
     "node": ">=20"
@@ -20,8 +21,10 @@
     "@anthropic-ai/sdk": "^0.68.0",
     "cheerio": "^1.0.0",
     "express": "^4.21.2",
-    "playwright": "^1.49.1",
     "robots-parser": "^3.0.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "optionalDependencies": {
+    "playwright": "^1.49.1"
+  }
 }

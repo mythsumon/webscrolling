@@ -445,6 +445,54 @@ the schema in ARCHITECTURE.md §8 if you need persistence.
 
 ---
 
+## Deploying
+
+The engine runs in two shapes, and the difference matters.
+
+| | Long-lived server | Serverless (Vercel) |
+|---|---|---|
+| Static extraction (JSON-LD, OG, semantic HTML, label proximity) | yes | **yes** |
+| List records, numbered pagination | yes | **yes** |
+| JavaScript-rendered pages | yes | **no** |
+| Infinite scroll / "load more" | yes | **no** |
+| Page budget · records · per-host delay | 5 · 200 · 1200 ms | 3 · 60 · 600 ms |
+
+### Vercel
+
+`vercel.json` and `api/index.js` are committed, so a push deploys. `api/index.js`
+exports the Express app as a request handler; `src/server.js` only binds a port
+when run directly.
+
+**A serverless function cannot run Chromium and has a hard time limit**, so
+`render` is forced to `never` there and the scroll options are refused with an
+explanation rather than attempted — a browser launch would just burn the
+60-second budget and fail. The UI detects this via `/api/health` and disables
+those controls with a banner, so nothing is silently ignored.
+
+Two more things worth knowing about serverless hosting:
+
+- **Exports fall back to the browser.** Results are cached in instance memory
+  for the download route, but consecutive requests can land on different
+  instances. On a miss the route returns 404 and the UI builds the CSV/JSON
+  locally from the result it already has.
+- **Cloud IPs get blocked.** Plenty of sites refuse datacentre ranges, so a URL
+  that scrapes fine from your machine may return 403 from Vercel. That shows up
+  as a `blocked` error, not a crash.
+
+### Anywhere that runs a normal Node process
+
+Render, Railway, Fly.io, a container, a VPS — this is the full-featured mode:
+
+```bash
+npm ci && npx playwright install --with-deps chromium
+PORT=3000 npm start
+```
+
+`playwright` is an **optional** dependency: the renderer imports it
+dynamically and reports `renderer_unavailable` if it is missing, so
+`npm install --omit=optional` gives a small static-only install that still
+works.
+
 ## Tests
 
 ```bash
