@@ -118,3 +118,19 @@ test('the package entry points referenced in package.json exist and are tracked'
     if (tracked) assert.ok(tracked.has(rel), `package.json points at ${rel}, which is not committed`);
   }
 });
+
+test('Vercel serves public directly without Express framework detection', () => {
+  const config = JSON.parse(readFileSync(path.join(root, 'vercel.json'), 'utf8'));
+  assert.equal(config.framework, null, 'Vercel framework detection must stay disabled');
+  assert.equal(config.buildCommand, 'echo "no build step — public/ is served as-is"');
+  assert.equal(config.outputDirectory, 'public');
+  assert.ok(config.rewrites.some(({ source, destination }) => source === '/api/(.*)' && destination === '/api/index.js'));
+
+  const publicFiles = jsFiles(path.join(root, 'public'));
+  assert.deepEqual(
+    publicFiles.map((file) => path.basename(file)),
+    ['ui.js'],
+    'public must not contain app.js, which Vercel can mistake for an Express entrypoint',
+  );
+  assert.match(readFileSync(path.join(root, 'public', 'index.html'), 'utf8'), /src="ui\.js"/);
+});
