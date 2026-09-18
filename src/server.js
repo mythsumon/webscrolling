@@ -15,6 +15,7 @@
 
 import express from 'express';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { scrape, DEFAULT_OPTIONS } from './core/pipeline.js';
@@ -47,7 +48,19 @@ const SERVERLESS_LIMITS = {
 export function createApp({ renderer = null } = {}) {
   const app = express();
   app.use(express.json({ limit: '128kb' }));
-  app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+
+  // Serve the UI only when the directory is actually present. In a serverless
+  // bundle it is not — the platform serves public/ from its CDN and only
+  // /api/* reaches this function — and mounting a static handler on a missing
+  // root is a needless failure mode for a path that should never arrive here.
+  const hasPublicDir = existsSync(PUBLIC_DIR);
+  if (hasPublicDir) {
+    app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+  } else {
+    // Belt and braces: if a request for the UI does reach the function anyway,
+    // hand it to the CDN copy rather than failing.
+    app.get('/', (_req, res) => res.redirect(302, '/index.html'));
+  }
 
   const maxConcurrent = Number(process.env.MAX_CONCURRENT_SCRAPES ?? 2);
   let active = 0;
