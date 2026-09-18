@@ -25,7 +25,27 @@ import { parseLabels } from './extract/labels.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(here, '..', 'public');
+const ENV_FILE = path.join(here, '..', '.env');
 const MAX_LABELS = 40;
+
+/**
+ * Load a local .env if one exists, so keys can be pasted into a file instead
+ * of exported as shell variables — which is fiddly on Windows and does not
+ * survive a new terminal. Real environment variables still win: a platform
+ * like Vercel sets them directly and must not be overridden by a stray file.
+ */
+function loadLocalEnv() {
+  if (!existsSync(ENV_FILE) || typeof process.loadEnvFile !== 'function') return;
+  const before = { ...process.env };
+  try {
+    process.loadEnvFile(ENV_FILE);
+    // Restore anything that was already set in the real environment.
+    for (const [k, v] of Object.entries(before)) process.env[k] = v;
+  } catch (err) {
+    console.warn(`Could not read .env: ${err.message}`);
+  }
+}
+loadLocalEnv();
 
 /**
  * Are we inside a serverless function? Vercel, Netlify and Lambda all set one
@@ -93,7 +113,7 @@ export function createApp({ renderer = null } = {}) {
       places: Boolean(process.env.GOOGLE_MAPS_API_KEY),
       placesNote: process.env.GOOGLE_MAPS_API_KEY
         ? null
-        : 'Set GOOGLE_MAPS_API_KEY (with "Places API (New)" enabled) to use the Google Places tab. It is Google\'s official API, not a Maps scrape, so a key is required and each search is billed to your project.',
+        : 'Needs a Google API key. Free for normal use — Text Search is a "Pro" SKU with 5,000 free searches per month — but Google requires a billing account to issue a key. Enable "Places API (New)", then put GOOGLE_MAPS_API_KEY in a .env file at the project root (see .env.example) and restart.',
       limits: SERVERLESS ? SERVERLESS_LIMITS : null,
       defaults: DEFAULT_OPTIONS,
     });

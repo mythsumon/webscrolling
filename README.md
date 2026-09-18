@@ -451,9 +451,42 @@ The UI has a second tab that returns businesses from Google — **through the
 official Places API, not by scraping Maps.**
 
 ```bash
-export GOOGLE_MAPS_API_KEY=...        # "Places API (New)" enabled on the project
+cp .env.example .env                  # then paste your key into GOOGLE_MAPS_API_KEY
 npm start                             # the Google Places tab becomes usable
 ```
+
+A real environment variable still wins over `.env`, so a deployment that sets
+`GOOGLE_MAPS_API_KEY` directly is unaffected.
+
+### Is the key free?
+
+**For normal use, yes — but it is not key-free.**
+
+- Places API **Text Search is a "Pro" SKU with 5,000 free events per month**.
+  Google moved off the old flat $200 monthly credit to per-SKU free caps, so
+  5,000 searches a month cost nothing. Past that it is billed per 1,000
+  requests.
+- **A Google Cloud billing account (card on file) is required to issue a key
+  at all**, even to stay inside the free cap. There is no way around that and
+  no way for this project to supply one — the key is yours, billed to your
+  project.
+- **One search of 20 results is one event; asking for 60 is three**, because
+  Google pages at 20. Keep *Max results* low while experimenting.
+- Photos cost an extra call each, which is why `maxPhotosPerPlace` defaults to 1.
+- Requesting more field groups can move a request into a pricier tier, which is
+  why the field mask is built only from the labels you actually asked for.
+
+Getting one:
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project
+2. Enable billing on that project
+3. APIs & Services → Library → enable **Places API (New)**
+4. APIs & Services → Credentials → Create credentials → API key
+5. Restrict it: API restrictions → Places API (New). For a server, restrict by
+   **IP**, not by HTTP referrer.
+
+Until a key is present the tab disables itself and says so, rather than failing
+on submit.
 
 Type a query the way you would in Maps (`beauty salons in Yangon`), pick the
 fields you want, and you get the same record table, coverage percentages and
