@@ -217,3 +217,33 @@ pre {
 .inline-num { width: 4.5em; padding: 2px 5px; display: inline-block; }
 .inline-check { display: inline-flex; gap: 4px; align-items: center; }
 .inline-check input { width: auto; margin: 0; }
+
+/* Source tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab {
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 9px 16px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); border-color: transparent; }
+.tab.active {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.panel-note {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  background: var(--chip);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.panel-note strong { color: var(--ink); }

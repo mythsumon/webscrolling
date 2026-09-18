@@ -13,7 +13,87 @@
   </header>
 
   <main>
-    <form id="scrape-form" class="card">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-website" class="tab active" aria-selected="true" aria-controls="scrape-form">
+        Scrape a website
+      </button>
+      <button type="button" role="tab" id="tab-places" class="tab" aria-selected="false" aria-controls="places-form">
+        Google Places
+      </button>
+    </div>
+
+    <form id="places-form" class="card" role="tabpanel" aria-labelledby="tab-places" hidden>
+      <p class="panel-note">
+        Businesses from Google, via the <strong>official Places API</strong> — not by scraping Maps.
+        Google's Terms of Service prohibit automated extraction of Maps content, and the results
+        there are a virtualised panel behind bot detection. The API returns the same businesses as
+        structured fields, which is both permitted and better data.
+        <span class="hint" id="places-hint"></span>
+      </p>
+
+      <div class="field">
+        <label for="places-query">Search query</label>
+        <input
+          id="places-query"
+          type="text"
+          placeholder="e.g. beauty salons in Yangon"
+          autocomplete="off"
+        />
+        <p class="help">Same phrasing you would type into Maps: what, and where.</p>
+      </div>
+
+      <div class="field">
+        <div class="labels-head">
+          <label for="places-label-input">Fields to return</label>
+          <div class="presets">
+            <span>Presets:</span>
+            <button type="button" class="link" data-places-preset="business">Business</button>
+            <button type="button" class="link" data-places-preset="geo">With coordinates</button>
+            <button type="button" class="link" data-places-preset="clear">Clear</button>
+          </div>
+        </div>
+        <div class="label-entry">
+          <input id="places-label-input" type="text" placeholder="Type a field and press Enter (e.g. Rating)" autocomplete="off" />
+          <button type="button" id="places-add-label">+ Add Field</button>
+        </div>
+        <p class="help">
+          Places has a fixed field set: <em>Name</em>, <em>Address</em>, <em>Phone Number</em>,
+          <em>Website</em>, <em>Rating</em>, <em>Reviews</em>, <em>Opening Hours</em>,
+          <em>Category</em>, <em>Price</em>, <em>Latitude</em>, <em>Longitude</em>,
+          <em>Photo</em>, <em>Google Maps Link</em>, <em>Place ID</em>.
+          Anything outside it comes back null.
+        </p>
+        <ul id="places-label-list" class="label-list" aria-live="polite"></ul>
+      </div>
+
+      <details class="advanced">
+        <summary>Advanced options</summary>
+        <div class="options-grid">
+          <label>
+            Max results
+            <input id="places-max" type="number" min="1" max="60" value="20" />
+            <span class="hint">Google caps a text search at 60.</span>
+          </label>
+          <label>
+            Photos per place
+            <input id="places-photos" type="number" min="0" max="3" value="1" />
+            <span class="hint">Each photo URL is a separate billed call.</span>
+          </label>
+          <label>
+            Language code
+            <input id="places-lang" type="text" placeholder="en" autocomplete="off" />
+            <span class="hint">Optional, e.g. en, my, th.</span>
+          </label>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button type="submit" id="places-submit" class="primary">Search Places</button>
+        <span id="places-status" class="status" role="status"></span>
+      </div>
+    </form>
+
+    <form id="scrape-form" class="card" role="tabpanel" aria-labelledby="tab-website">
       <div class="field">
         <label for="url">Website URL</label>
         <input

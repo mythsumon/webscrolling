@@ -571,6 +571,159 @@ function csvCell(value) {
   return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
+/* ----------------------------------------------------- Google Places tab */
+
+const placesForm = document.getElementById('places-form');
+const placesQuery = document.getElementById('places-query');
+const placesLabelInput = document.getElementById('places-label-input');
+const placesLabelList = document.getElementById('places-label-list');
+const placesStatus = document.getElementById('places-status');
+const placesSubmit = document.getElementById('places-submit');
+
+const PLACES_PRESETS = {
+  business: ['Name', 'Address', 'Phone Number', 'Website', 'Rating', 'Reviews', 'Opening Hours', 'Category'],
+  geo: ['Name', 'Address', 'Latitude', 'Longitude', 'Rating', 'Google Maps Link', 'Photo'],
+};
+
+/** @type {string[]} */
+let placesLabels = [];
+
+function renderPlacesLabels() {
+  placesLabelList.replaceChildren();
+  for (const label of placesLabels) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = label;
+    li.append(name);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', `Remove ${label}`);
+    remove.addEventListener('click', () => {
+      placesLabels = placesLabels.filter((l) => l !== label);
+      renderPlacesLabels();
+    });
+    li.append(remove);
+    placesLabelList.append(li);
+  }
+}
+
+function addPlacesLabels(input) {
+  let added = 0;
+  for (const part of String(input).split(/[,\n]/).map((s) => s.trim()).filter(Boolean)) {
+    if (placesLabels.some((l) => l.toLowerCase() === part.toLowerCase())) continue;
+    placesLabels.push(part);
+    added += 1;
+  }
+  if (added) renderPlacesLabels();
+  return added;
+}
+
+document.getElementById('places-add-label').addEventListener('click', () => {
+  if (addPlacesLabels(placesLabelInput.value)) placesLabelInput.value = '';
+  placesLabelInput.focus();
+});
+
+placesLabelInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    if (addPlacesLabels(placesLabelInput.value)) placesLabelInput.value = '';
+  } else if (e.key === 'Backspace' && !placesLabelInput.value && placesLabels.length) {
+    placesLabels.pop();
+    renderPlacesLabels();
+  }
+});
+
+document.querySelectorAll('[data-places-preset]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const preset = btn.dataset.placesPreset;
+    if (preset === 'clear') {
+      placesLabels = [];
+      renderPlacesLabels();
+      return;
+    }
+    addPlacesLabels(PLACES_PRESETS[preset].join(','));
+  });
+});
+
+placesForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (placesLabelInput.value.trim()) {
+    addPlacesLabels(placesLabelInput.value);
+    placesLabelInput.value = '';
+  }
+  if (!placesQuery.value.trim()) {
+    setPlacesStatus('Enter a search query first, e.g. "beauty salons in Yangon".', true);
+    placesQuery.focus();
+    return;
+  }
+  if (!placesLabels.length) {
+    setPlacesStatus('Add at least one field.', true);
+    placesLabelInput.focus();
+    return;
+  }
+
+  placesSubmit.disabled = true;
+  placesSubmit.textContent = 'Searching…';
+  setPlacesStatus('Querying the Places API…');
+
+  try {
+    const res = await fetch('/api/places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: placesQuery.value,
+        labels: placesLabels,
+        options: {
+          maxResults: Number(document.getElementById('places-max').value) || 20,
+          maxPhotosPerPlace: Number(document.getElementById('places-photos').value) || 0,
+          languageCode: document.getElementById('places-lang').value.trim() || undefined,
+        },
+      }),
+    });
+    const payload = await res.json();
+    if (!res.ok) {
+      setPlacesStatus(payload.detail ?? payload.error ?? `Request failed (${res.status}).`, true);
+      return;
+    }
+    lastResult = payload;
+    renderResult(payload);
+    setPlacesStatus('');
+  } catch (err) {
+    setPlacesStatus(`Could not reach the server: ${err.message}`, true);
+  } finally {
+    placesSubmit.disabled = false;
+    placesSubmit.textContent = 'Search Places';
+  }
+});
+
+function setPlacesStatus(text, isError = false) {
+  placesStatus.textContent = text;
+  placesStatus.classList.toggle('bad', isError);
+}
+
+/* --------------------------------------------------------------- tabbing */
+
+const tabs = [
+  { tab: document.getElementById('tab-website'), panel: form },
+  { tab: document.getElementById('tab-places'), panel: placesForm },
+];
+
+for (const { tab } of tabs) {
+  tab.addEventListener('click', () => {
+    for (const entry of tabs) {
+      const isActive = entry.tab === tab;
+      entry.tab.classList.toggle('active', isActive);
+      entry.tab.setAttribute('aria-selected', String(isActive));
+      entry.panel.hidden = !isActive;
+    }
+    // Results from the other source would be confusing next to a fresh form.
+    results.hidden = true;
+  });
+}
+
 /* ------------------------------------------------------------------- init */
 
 (async function init() {
@@ -580,6 +733,14 @@ function csvCell(value) {
 
     llmHint.textContent = health.llm ? '' : 'Needs ANTHROPIC_API_KEY on the server.';
     document.getElementById('useLlm').disabled = !health.llm;
+
+    // Say up front whether the Places tab can work, rather than after a search.
+    const placesHint = document.getElementById('places-hint');
+    if (!health.places) {
+      placesHint.textContent = health.placesNote ?? 'Not configured on this server.';
+      placesSubmit.disabled = true;
+      placesSubmit.title = 'GOOGLE_MAPS_API_KEY is not set on the server';
+    }
 
     // Say what this deployment cannot do *before* someone ticks a box that
     // will be silently ignored.

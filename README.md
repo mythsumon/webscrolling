@@ -445,6 +445,85 @@ the schema in ARCHITECTURE.md §8 if you need persistence.
 
 ---
 
+## Google Places (the "list from Google Maps" tab)
+
+The UI has a second tab that returns businesses from Google — **through the
+official Places API, not by scraping Maps.**
+
+```bash
+export GOOGLE_MAPS_API_KEY=...        # "Places API (New)" enabled on the project
+npm start                             # the Google Places tab becomes usable
+```
+
+Type a query the way you would in Maps (`beauty salons in Yangon`), pick the
+fields you want, and you get the same record table, coverage percentages and
+JSON/CSV export as a scraped list.
+
+### Why not scrape Maps directly
+
+Worth being precise, because the usual objection is the wrong one:
+
+- **robots.txt is not the blocker.** `google.com/robots.txt` says
+  `Disallow: /maps/` but then `Allow: /maps/search/`, so the crawler would not
+  refuse that path.
+- **The Terms of Service are.** Google's ToS prohibit automated extraction of
+  Maps content. robots.txt permitting a crawl path is not permission to harvest
+  the data behind it.
+- **And it would not work anyway.** Maps results are a virtualised JS panel
+  fed by internal XHR, behind bot detection and consent interstitials. Making
+  it work means building evasion, not extraction.
+
+The API returns the same businesses as structured fields, which is both
+permitted and better data than any scrape of that page would yield.
+
+### Fields
+
+Places has a **fixed** field set, unlike scraping a page where any label can
+work. These map:
+
+| Your label | Places field |
+|---|---|
+| Name | `displayName.text` |
+| Address | `formattedAddress` |
+| Phone Number | `nationalPhoneNumber` (falls back to international) |
+| International Phone | `internationalPhoneNumber` |
+| Website | `websiteUri` |
+| Google Maps Link | `googleMapsUri` |
+| Rating | `rating` |
+| Reviews | `userRatingCount` |
+| Latitude / Longitude | `location.latitude` / `.longitude` |
+| Opening Hours | `regularOpeningHours.weekdayDescriptions` |
+| Category | `primaryTypeDisplayName` (falls back to `types`) |
+| Price | `priceLevel` |
+| Business Status | `businessStatus` |
+| Place ID | `id` |
+| Photo / Photos | `photos` → resolved to image URLs |
+
+A label with no Places equivalent (`Owner Email`, say) comes back `null` and is
+named in `warnings` — it is not silently dropped.
+
+### Cost and limits, which are Google's not mine
+
+- **Every search is billed to your key**, and so is every photo URL resolved.
+  The field mask is built from the labels you actually asked for, because
+  Google prices by field group — asking for everything costs more.
+- **60 results maximum** per text search (3 pages of 20). Asking for more is
+  capped and reported in `warnings`.
+- Photos need a second call each, so `maxPhotosPerPlace` defaults to **1** and
+  photos are only fetched when a photo label is requested.
+- Photo URLs are resolved server-side with `skipHttpRedirect=true`. The simpler
+  media URL would work in an `<img>` tag but only by putting **your API key in
+  a client-visible URL**, so it is not used.
+
+An invalid key is reported as an auth problem with what to check — note that
+Google returns **400**, not 403, for `API_KEY_INVALID`, so classifying on
+status alone would send you off to inspect your field mask.
+
+```bash
+curl -s -X POST localhost:3000/api/places -H 'Content-Type: application/json' \
+  -d '{"query":"beauty salons in Yangon","labels":["Name","Address","Phone Number","Rating"]}'
+```
+
 ## Deploying
 
 The engine runs in two shapes, and the difference matters.
@@ -496,7 +575,7 @@ works.
 ## Tests
 
 ```bash
-npm test        # 80 tests, no network access
+npm test        # 102 tests, no network access
 ```
 
 Fixtures are local HTML files and a loopback HTTP server

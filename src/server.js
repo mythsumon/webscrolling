@@ -90,6 +90,10 @@ export function createApp({ renderer = null } = {}) {
         ? 'Browser rendering is not available on serverless hosting: no Chromium, and scrapes must finish inside the function time limit. JavaScript-built pages and infinite scroll need `npm start` on a normal server.'
         : renderer?.unavailableReason ?? null,
       llm: Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN),
+      places: Boolean(process.env.GOOGLE_MAPS_API_KEY),
+      placesNote: process.env.GOOGLE_MAPS_API_KEY
+        ? null
+        : 'Set GOOGLE_MAPS_API_KEY (with "Places API (New)" enabled) to use the Google Places tab. It is Google\'s official API, not a Maps scrape, so a key is required and each search is billed to your project.',
       limits: SERVERLESS ? SERVERLESS_LIMITS : null,
       defaults: DEFAULT_OPTIONS,
     });
@@ -154,6 +158,64 @@ export function createApp({ renderer = null } = {}) {
     } catch (err) {
       console.error('scrape failed:', err);
       res.status(500).json({ error: 'Scrape failed unexpectedly.', detail: err.message });
+    } finally {
+      active -= 1;
+    }
+  });
+
+  /**
+   * Google Places search — the supported route to "the list from Google Maps".
+   * See src/sources/googlePlaces.js for why this is an API call rather than a
+   * scrape. Billed to the caller's own key, so the result limit is capped.
+   */
+  app.post('/api/places', async (req, res) => {
+    const { query, labels, options = {} } = req.body ?? {};
+
+    if (typeof query !== 'string' || !query.trim()) {
+      return res.status(400).json({ error: 'A "query" string is required, for example "beauty salons in Yangon".' });
+    }
+    if (!Array.isArray(labels) || !labels.length) {
+      return res.status(400).json({ error: 'A non-empty "labels" array is required.' });
+    }
+    if (labels.length > MAX_LABELS) {
+      return res.status(400).json({ error: `Too many labels (max ${MAX_LABELS}).` });
+    }
+    if (!process.env.GOOGLE_MAPS_API_KEY) {
+      return res.status(503).json({
+        error: 'Google Places is not configured on this server.',
+        detail: 'Set GOOGLE_MAPS_API_KEY with "Places API (New)" enabled for the project. This uses Google\'s official API rather than scraping Maps, so a key is required and Google bills your project per search.',
+      });
+    }
+    if (active >= maxConcurrent) {
+      return res.status(503).json({ error: 'Server is busy. Try again shortly.' });
+    }
+
+    active += 1;
+    const startedAt = Date.now();
+    try {
+      const { searchGooglePlaces } = await import('./sources/googlePlaces.js');
+      const result = await searchGooglePlaces({
+        query,
+        labels: labels.map(String),
+        options: {
+          // Cost control: the client may not ask for unlimited billed calls.
+          maxResults: Math.min(Number(options.maxResults) || 20, 60),
+          maxPhotosPerPlace: Math.min(Math.max(Number(options.maxPhotosPerPlace) || 1, 0), 3),
+          languageCode: typeof options.languageCode === 'string' ? options.languageCode : undefined,
+          regionCode: typeof options.regionCode === 'string' ? options.regionCode : undefined,
+        },
+      });
+      result.duration_ms = Date.now() - startedAt;
+
+      const id = randomUUID();
+      result.id = id;
+      recent.set(id, result);
+      if (recent.size > RECENT_LIMIT) recent.delete(recent.keys().next().value);
+
+      res.json(result);
+    } catch (err) {
+      console.error('places search failed:', err);
+      res.status(500).json({ error: 'Places search failed unexpectedly.', detail: err.message });
     } finally {
       active -= 1;
     }

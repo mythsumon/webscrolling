@@ -381,7 +381,9 @@ src/
     resolvers.js          the tier 1-4 cascade per value kind
     llm.js                tier 5: grounded Claude call for leftovers
   links/
-    discovery.js          relevance-scored internal link selection
+    discovery.js          relevance-scored internal link selection + pagination
+  sources/
+    googlePlaces.js       Google Places API source (not a Maps scrape)
   output/
     normalize.js          whitespace/url/phone normalisation, dedupe
     result.js             result assembly, status, missing_fields
