@@ -529,6 +529,10 @@ test/        tests + fixtures
 tools/       fixture server
 ```
 
+Vercel is configured with framework detection disabled because this project
+serves `public/` statically and routes only `/api/*` to the Express serverless
+function. This avoids treating the browser UI as an Express entrypoint.
+
 ## Adding a new field kind
 
 The engine does not need changes to accept a new label — that is the point. Edit

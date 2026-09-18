@@ -1,7 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "//": "framework:null is load-bearing. Vercel auto-detects the Express preset because express is a dependency, then fails the build with 'No entrypoint found which imports express' — it looks for a server entrypoint at the project root, but package.json main is src/index.js (the library entry, which deliberately does not import express) and the only app.js in the tree is public/app.js, the browser-side UI script. This project routes /api/* to a function and serves public/ as static instead, so framework detection must be off.",
   "framework": null,
 
   "buildCommand": "echo \"no build step — public/ is served as-is\"",
