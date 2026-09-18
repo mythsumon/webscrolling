@@ -389,7 +389,7 @@ src/
   util/
     url.js  text.js  logger.js  queue.js
 public/
-  index.html app.js styles.css     the UI
+  index.html ui.js styles.css      the UI
 test/
   *.test.js  fixtures/
 ```
